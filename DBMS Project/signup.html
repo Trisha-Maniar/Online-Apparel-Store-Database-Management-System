@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign Up - DBMS Project</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Create Account</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="cart.html">Cart</a>
+      <a href="orders.html">Orders</a>
+      <a href="login.html" id="authLink">Login</a>
+    </nav>
+  </header>
+  <main>
+    <form id="signupForm">
+      <h2 style="margin-bottom: 1.5rem; color: var(--primary-color); text-align: center;">Create New Account</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; text-align: center; font-size: 0.875rem;">
+        Register a new customer in the 'customer' table
+      </p>
+      
+      <label>Full Name</label>
+      <input type="text" id="name" placeholder="Enter your full name">
+      
+      <label>Email Address</label>
+      <input type="email" id="email" required placeholder="Enter your email">
+      
+      <label>Password (min. 6 characters)</label>
+      <input type="password" id="password" required placeholder="Enter your password">
+      
+      <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Create Account</button>
+      
+      <div id="dbOperation" class="db-operation" style="display: none; margin-top: 1rem;">
+        Creating account in database...
+      </div>
+      
+      <p style="text-align: center; margin-top: 1.5rem; color: var(--text-secondary);">
+        Already have an account? <a href="login.html" style="color: var(--primary-color); font-weight: 600;">Login</a>
+      </p>
+    </form>
+  </main>
+  <script src="common.js"></script>
+  <script>
+document.getElementById('signupForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = e.target.querySelector('button[type="submit"]');
+  const dbOp = document.getElementById('dbOperation');
+  
+  if(!email || !password){
+    alert('Email and password are required');
+    return;
+  }
+  
+  if(password.length < 6){
+    alert('Password must be at least 6 characters long');
+    return;
+  }
+  
+  try{
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+    dbOp.style.display = 'block';
+    dbOp.textContent = `→ INSERT INTO customer (Name, Email, Password, Date_Registered) VALUES (...)`;
+    
+    const res = await fetch('/auth/signup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,email,password})
+    });
+    const r = await res.json();
+    
+    if(r.ok){ 
+      dbOp.textContent = `✓ Account created! Customer_ID: ${r.customer_id}`;
+      dbOp.style.borderLeftColor = 'var(--secondary-color)';
+      btn.textContent = '✓ Account Created!';
+      alert('Account created successfully! Please login.'); 
+      setTimeout(() => {
+        window.location.href = '/login.html'; 
+      }, 1500);
+    } else { 
+      dbOp.textContent = `✗ Error: ${r.error || 'Signup failed'}`;
+      dbOp.style.borderLeftColor = 'var(--danger-color)';
+      alert(r.error || 'Signup failed'); 
+      btn.disabled = false;
+      btn.textContent = 'Create account';
+    }
+  }catch(err){
+    dbOp.textContent = `✗ Database connection error`;
+    dbOp.style.borderLeftColor = 'var(--danger-color)';
+    alert('Error connecting to server');
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = 'Create account';
+  }
+});
+</script>
+</body>
+</html>

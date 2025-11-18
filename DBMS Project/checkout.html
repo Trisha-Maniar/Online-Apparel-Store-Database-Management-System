@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+  <title>Checkout</title>
+  <link rel='stylesheet' href='styles.css'>
+</head>
+<body>
+<header><a href='index.html'>← Home</a></header>
+<main>
+  <h2>Checkout</h2>
+  <p>Click to complete your order (simulated payment).</p>
+  <button id="pay">Pay (simulate)</button>
+</main>
+<script src="common.js"></script>
+<script>
+document.getElementById('pay').addEventListener('click', async ()=>{
+  try{
+    const btn = document.getElementById('pay');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+    const custId = await getCustomerId();
+    const res = await fetch('/api/checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({guest_id: custId, payment_method:'UPI'})
+    });
+    const r = await res.json();
+    if(r.ok) {
+      alert('Order placed successfully! Order ID: ' + r.order_id + '\nTotal: ₹' + parseFloat(r.total).toFixed(2));
+      window.location.href='/orders.html';
+    } else {
+      alert('Error: ' + (r.error || 'Checkout failed'));
+      btn.disabled = false;
+      btn.textContent = 'Pay (simulate)';
+    }
+  }catch(e){
+    alert('Error during checkout');
+    console.error(e);
+    document.getElementById('pay').disabled = false;
+    document.getElementById('pay').textContent = 'Pay (simulate)';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# ============================================
+# Online Apparel Store - DBMS Project
+# Python Dependencies
+# ============================================
+# 
+# Python Version: 3.7 or higher required
+# 
+# Installation:
+#   pip install -r requirements.txt
+# 
+# Or install individually:
+#   pip install Flask flask-cors python-dotenv PyMySQL Werkzeug
+# ============================================
+
+# Web Framework - Flask for REST API and serving static files
+Flask>=3.0.0,<4.0.0
+
+# CORS Support - Enable cross-origin requests for API
+flask-cors>=4.0.0,<5.0.0
+
+# Environment Variables - Load configuration from .env file
+python-dotenv>=1.0.0,<2.0.0
+
+# MySQL Connector - Database connectivity (works with caching_sha2_password)
+PyMySQL>=1.1.0,<2.0.0
+
+# Security Utilities - Password hashing and security functions
+Werkzeug>=3.0.1,<4.0.0

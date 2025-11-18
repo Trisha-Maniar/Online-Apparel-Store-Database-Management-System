@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login - DBMS Project</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Login</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="cart.html">Cart</a>
+      <a href="orders.html">Orders</a>
+      <a href="login.html" class="active" id="authLink">Login</a>
+    </nav>
+  </header>
+  <main>
+    <form id="loginForm">
+      <h2 style="margin-bottom: 1.5rem; color: var(--primary-color); text-align: center;">Login to Your Account</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem; text-align: center; font-size: 0.875rem;">
+        Authenticate using the 'customer' table in MySQL database
+      </p>
+      
+      <label>Email Address</label>
+      <input type="email" id="email" required placeholder="Enter your email">
+      
+      <label>Password</label>
+      <input type="password" id="password" required placeholder="Enter your password">
+      
+      <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Login</button>
+      
+      <div id="dbOperation" class="db-operation" style="display: none; margin-top: 1rem;">
+        Authenticating with database...
+      </div>
+      
+      <p style="text-align: center; margin-top: 1.5rem; color: var(--text-secondary);">
+        Don't have an account? <a href="signup.html" style="color: var(--primary-color); font-weight: 600;">Sign up</a>
+      </p>
+    </form>
+  </main>
+  <script src="common.js"></script>
+  <script>
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = e.target.querySelector('button[type="submit"]');
+  const dbOp = document.getElementById('dbOperation');
+  
+  if(!email || !password){
+    alert('Please fill in all fields');
+    return;
+  }
+  
+  try{
+    btn.disabled = true;
+    btn.textContent = 'Logging in...';
+    dbOp.style.display = 'block';
+    dbOp.textContent = `→ SELECT * FROM customer WHERE Email = '${email}'`;
+    
+    const res = await fetch('/auth/login', {
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body: JSON.stringify({email,password})
+    });
+    const r = await res.json();
+    
+    if(r.ok){ 
+      dbOp.textContent = `✓ Authentication successful! Customer_ID: ${r.user.id}`;
+      dbOp.style.borderLeftColor = 'var(--secondary-color)';
+      btn.textContent = '✓ Success!';
+      setTimeout(() => {
+        window.location.href = '/'; 
+      }, 1000);
+    } else { 
+      dbOp.textContent = `✗ Authentication failed: ${r.error || 'Invalid credentials'}`;
+      dbOp.style.borderLeftColor = 'var(--danger-color)';
+      alert(r.error || 'Login failed'); 
+      btn.disabled = false;
+      btn.textContent = 'Login';
+    }
+  }catch(err){
+    dbOp.textContent = `✗ Database connection error`;
+    dbOp.style.borderLeftColor = 'var(--danger-color)';
+    alert('Error connecting to server');
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = 'Login';
+  }
+});
+</script>
+</body>
+</html>

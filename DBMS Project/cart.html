@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Shopping Cart - DBMS Project</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Shopping Cart</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="cart.html" class="active">Cart</a>
+      <a href="orders.html">Orders</a>
+      <a href="login.html" id="authLink">Login</a>
+    </nav>
+  </header>
+  <main>
+    <div class="card">
+      <h2 style="margin-bottom: 1rem; color: var(--primary-color);">Your Cart</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Items in your shopping cart. Data stored in 'cart' table.
+      </p>
+      <div id="cart"></div>
+    </div>
+  </main>
+  <script src="common.js"></script>
+  <script>
+async function load(){
+  try{
+    const c=document.getElementById('cart');
+    c.innerHTML = '<div class="loading">Loading cart from database<span class="spinner"></span></div>';
+    
+    const custId = await getCustomerId();
+    
+    // Show DB query
+    const dbQuery = document.createElement('div');
+    dbQuery.className = 'db-operation';
+    dbQuery.textContent = `→ SELECT * FROM cart WHERE Customer_ID = ${custId}`;
+    c.appendChild(dbQuery);
+    
+    const res = await fetch('/api/cart?guest_id=' + encodeURIComponent(custId));
+    const items = await res.json();
+    
+    if(items.error){ 
+      c.innerHTML = `
+        <div class="alert error">
+          <strong>Database Error:</strong> ${items.error}
+        </div>
+      `; 
+      return;
+    }
+    
+    if(items.length==0){ 
+      c.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🛒</div>
+          <h3>Your cart is empty</h3>
+          <p>Add some products to your cart to get started.</p>
+          <a href="index.html" class="btn mt-2">Continue Shopping</a>
+        </div>
+      `; 
+      return;
+    }
+    
+    c.innerHTML = '';
+    
+    // Show DB result
+    const dbResult = document.createElement('div');
+    dbResult.className = 'db-operation';
+    dbResult.textContent = `✓ Found ${items.length} item(s) in cart table`;
+    dbResult.style.borderLeftColor = 'var(--secondary-color)';
+    c.appendChild(dbResult);
+    
+    let tot=0;
+    items.forEach(it=>{
+      tot += parseFloat(it.Price)*it.Quantity;
+      const div = document.createElement('div');
+      div.className = 'cart-item';
+      div.innerHTML = `
+        <div class="cart-item-info">
+          <div class="cart-item-name">${it.Product_Name}</div>
+          <div class="cart-item-details">
+            Quantity: ${it.Quantity} × ₹${parseFloat(it.Price).toFixed(2)} each
+            <br>Product ID: ${it.Product_ID}
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div class="cart-item-price">₹${(parseFloat(it.Price)*it.Quantity).toFixed(2)}</div>
+          <button class="rm danger" data-id="${it.Product_ID}">Remove</button>
+        </div>
+      `;
+      c.appendChild(div);
+    });
+    
+    // Total and checkout
+    const summary = document.createElement('div');
+    summary.style.marginTop = '2rem';
+    summary.style.paddingTop = '1.5rem';
+    summary.style.borderTop = '2px solid var(--border-color)';
+    summary.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div style="font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">Total Amount:</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">₹${tot.toFixed(2)}</div>
+      </div>
+      <button id="checkout" class="btn success" style="width: 100%; padding: 1rem; font-size: 1.125rem;">
+        Proceed to Checkout
+      </button>
+      <div class="db-operation mt-2" id="checkoutDbOp" style="display: none;">
+        Processing order in database...
+      </div>
+    `;
+    c.appendChild(summary);
+    
+    // Checkout button
+    const checkout = document.getElementById('checkout');
+    checkout.addEventListener('click', async ()=>{
+      try{
+        checkout.disabled = true;
+        checkout.textContent = 'Processing Order...';
+        const checkoutDbOp = document.getElementById('checkoutDbOp');
+        checkoutDbOp.style.display = 'block';
+        checkoutDbOp.textContent = '→ INSERT INTO orders, order_item, payment tables...';
+        
+        const custId = await getCustomerId();
+        const res = await fetch('/api/checkout',{
+          method:'POST', 
+          headers:{'Content-Type':'application/json'}, 
+          body:JSON.stringify({guest_id: custId, payment_method:'UPI'})
+        });
+        const r = await res.json();
+        
+        if(r.ok) {
+          checkoutDbOp.textContent = `✓ Order #${r.order_id} created successfully in database!`;
+          checkoutDbOp.style.borderLeftColor = 'var(--secondary-color)';
+          checkout.textContent = '✓ Order Placed!';
+          setTimeout(() => {
+            window.location.href='/orders.html';
+          }, 1500);
+        } else {
+          checkoutDbOp.textContent = `✗ Error: ${r.error || 'Checkout failed'}`;
+          checkoutDbOp.style.borderLeftColor = 'var(--danger-color)';
+          alert('Error: ' + (r.error || 'Checkout failed'));
+          checkout.disabled = false;
+          checkout.textContent = 'Proceed to Checkout';
+        }
+      }catch(err){
+        alert('Error during checkout: ' + err.message);
+        console.error(err);
+        checkout.disabled = false;
+        checkout.textContent = 'Proceed to Checkout';
+        document.getElementById('checkoutDbOp').style.display = 'none';
+      }
+    });
+    
+    // Remove buttons
+    Array.from(document.getElementsByClassName('rm')).forEach(b=> b.addEventListener('click', async (e)=>{
+      const id=e.target.getAttribute('data-id');
+      const btn = e.target;
+      const originalText = btn.textContent;
+      
+      btn.disabled = true;
+      btn.textContent = 'Removing...';
+      
+      const custId = await getCustomerId();
+      try{
+        const res = await fetch('/api/cart/remove',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({product_id:id, guest_id: custId})
+        });
+        const r = await res.json();
+        if(r.ok) {
+          location.reload();
+        } else {
+          alert('Error removing item: ' + (r.error || 'Unknown error'));
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }catch(err){
+        alert('Error removing item');
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }));
+  }catch(e){
+    const c=document.getElementById('cart');
+    c.innerHTML = `
+      <div class="alert error">
+        <strong>Error loading cart:</strong> ${e.message}
+      </div>
+    `;
+    console.error(e);
+  }
+}
+load();
+</script>
+</body>
+</html>

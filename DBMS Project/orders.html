@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width,initial-scale=1'>
+  <title>Order History - DBMS Project</title>
+  <link rel='stylesheet' href='styles.css'>
+</head>
+<body>
+  <header>
+    <h1>Order History</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="cart.html">Cart</a>
+      <a href="orders.html" class="active">Orders</a>
+      <a href="login.html" id="authLink">Login</a>
+    </nav>
+  </header>
+  <main>
+    <div class="card">
+      <h2 style="margin-bottom: 1rem; color: var(--primary-color);">Your Orders</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        View your order history. All data retrieved from 'orders' table.
+      </p>
+      <div id='orders'></div>
+    </div>
+  </main>
+  <script src="common.js"></script>
+  <script>
+async function load(){
+  try{
+    const el = document.getElementById('orders');
+    el.innerHTML = '<div class="loading">Loading orders from database<span class="spinner"></span></div>';
+    
+    const custId = await getCustomerId();
+    
+    // Show DB query
+    const dbQuery = document.createElement('div');
+    dbQuery.className = 'db-operation';
+    dbQuery.textContent = `→ SELECT * FROM orders WHERE Customer_ID = ${custId} ORDER BY Order_Date DESC`;
+    el.appendChild(dbQuery);
+    
+    const res = await fetch('/api/orders?guest_id=' + encodeURIComponent(custId));
+    const rows = await res.json();
+    
+    if(rows.error){ 
+      el.innerHTML = `
+        <div class="alert error">
+          <strong>Database Error:</strong> ${rows.error}
+        </div>
+      `; 
+      return;
+    }
+    
+    if(rows.length==0){ 
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          <h3>No orders found</h3>
+          <p>You haven't placed any orders yet.</p>
+          <a href="index.html" class="btn mt-2">Start Shopping</a>
+        </div>
+      `; 
+      return;
+    }
+    
+    // Show DB result
+    const dbResult = document.createElement('div');
+    dbResult.className = 'db-operation';
+    dbResult.textContent = `✓ Found ${rows.length} order(s) in orders table`;
+    dbResult.style.borderLeftColor = 'var(--secondary-color)';
+    el.appendChild(dbResult);
+    
+    rows.forEach(r=>{
+      const d = document.createElement('div');
+      d.className = 'order-card';
+      
+      const statusClass = r.Order_Status?.toLowerCase() || 'processing';
+      
+      d.innerHTML = `
+        <div class="order-header">
+          <div class="order-id">Order #${r.Order_ID}</div>
+          <div class="order-status ${statusClass}">${r.Order_Status || 'Processing'}</div>
+        </div>
+        <div class="order-details">
+          <div class="order-detail-item">
+            <div class="order-detail-label">Order Date</div>
+            <div class="order-detail-value">${new Date(r.Order_Date).toLocaleString()}</div>
+          </div>
+          <div class="order-detail-item">
+            <div class="order-detail-label">Total Amount</div>
+            <div class="order-detail-value" style="color: var(--primary-color); font-weight: 700; font-size: 1.25rem;">₹${parseFloat(r.Total_Amount).toFixed(2)}</div>
+          </div>
+          <div class="order-detail-item">
+            <div class="order-detail-label">Payment Method</div>
+            <div class="order-detail-value">${r.Payment_Method || 'N/A'}</div>
+          </div>
+          <div class="order-detail-item">
+            <div class="order-detail-label">Payment Status</div>
+            <div class="order-detail-value">${r.Payment_Status || 'N/A'}</div>
+          </div>
+          ${r.Shipping_Address ? `
+          <div class="order-detail-item">
+            <div class="order-detail-label">Shipping Address</div>
+            <div class="order-detail-value">${r.Shipping_Address}</div>
+          </div>
+          ` : ''}
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); font-size: 0.875rem; color: var(--text-secondary);">
+          Order ID: ${r.Order_ID} | Customer ID: ${r.Customer_ID}
+        </div>
+      `;
+      el.appendChild(d);
+    });
+  }catch(e){
+    const el = document.getElementById('orders');
+    el.innerHTML = `
+      <div class="alert error">
+        <strong>Error loading orders:</strong> ${e.message}
+      </div>
+    `;
+    console.error(e);
+  }
+}
+load();
+</script>
+</body>
+</html>

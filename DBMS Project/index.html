@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Online Apparel Store - DBMS Project</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Online Apparel Store</h1>
+    <nav>
+      <a href="index.html" class="active">Home</a>
+      <a href="cart.html">Cart</a>
+      <a href="orders.html">Orders</a>
+      <a href="login.html" id="authLink">Login</a>
+    </nav>
+  </header>
+  <main>
+    <div class="db-status" id="dbStatus">
+      <div class="db-status-text">
+        <div class="db-status-label">Database Connection</div>
+        <div class="db-status-value">Checking...</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom: 1rem; color: var(--primary-color);">Product Catalog</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Browse our collection of apparel products. All data is fetched from the MySQL database.
+      </p>
+      <section id="products"></section>
+    </div>
+  </main>
+  <script src="common.js"></script>
+  <script src="home.js"></script>
+</body>
+</html>

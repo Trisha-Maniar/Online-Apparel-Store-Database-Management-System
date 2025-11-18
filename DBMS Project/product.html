@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Product Details - DBMS Project</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Product Details</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="cart.html">Cart</a>
+      <a href="orders.html">Orders</a>
+      <a href="login.html" id="authLink">Login</a>
+    </nav>
+  </header>
+  <main>
+    <div class="card" id="content"></div>
+  </main>
+  <script src="common.js"></script>
+  <script>
+async function load(){
+  try{
+    const el=document.getElementById('content');
+    el.innerHTML = '<div class="loading">Loading product from database<span class="spinner"></span></div>';
+    
+    const params=new URLSearchParams(location.search);
+    const id=params.get('id');
+    if(!id){
+      el.innerHTML = `
+        <div class="alert error">
+          <strong>Error:</strong> Product ID missing
+        </div>
+      `;
+      return;
+    }
+    
+    // Show DB query
+    const dbQuery = document.createElement('div');
+    dbQuery.className = 'db-operation';
+    dbQuery.textContent = `→ SELECT * FROM product WHERE Product_ID = ${id}`;
+    el.appendChild(dbQuery);
+    
+    const res=await fetch('/api/products/'+id);
+    const p=await res.json();
+    
+    if(p.error){ 
+      el.innerHTML = `
+        <div class="alert error">
+          <strong>Database Error:</strong> ${p.error}
+        </div>
+      `; 
+      return; 
+    }
+    
+    // Show DB result
+    const dbResult = document.createElement('div');
+    dbResult.className = 'db-operation';
+    dbResult.textContent = `✓ Product found in database`;
+    dbResult.style.borderLeftColor = 'var(--secondary-color)';
+    el.appendChild(dbResult);
+    
+    const finalPrice = p.Discount && p.Discount > 0
+      ? (parseFloat(p.Price) * (1 - parseFloat(p.Discount)/100)).toFixed(2)
+      : parseFloat(p.Price).toFixed(2);
+    
+    const originalPrice = p.Discount && p.Discount > 0
+      ? `<span style="text-decoration: line-through; color: var(--text-secondary); margin-right: 0.5rem;">₹${parseFloat(p.Price).toFixed(2)}</span>`
+      : '';
+    
+    el.innerHTML = `
+      <div class="db-operation">
+        → SELECT * FROM product WHERE Product_ID = ${id}
+      </div>
+      <div class="db-operation" style="border-left-color: var(--secondary-color);">
+        ✓ Product found in database
+      </div>
+      <h2 style="color: var(--primary-color); margin-bottom: 1rem;">${p.Product_Name}</h2>
+      ${p.Description ? `<p style="color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6;">${p.Description}</p>` : ''}
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+        <div>
+          <div style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.25rem;">Brand</div>
+          <div style="font-size: 1.125rem; color: var(--text-primary);">${p.Brand || 'N/A'}</div>
+        </div>
+        ${p.Category ? `
+        <div>
+          <div style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.25rem;">Category</div>
+          <div style="font-size: 1.125rem; color: var(--text-primary);">${p.Category}</div>
+        </div>
+        ` : ''}
+        ${p.Size ? `
+        <div>
+          <div style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.25rem;">Size</div>
+          <div style="font-size: 1.125rem; color: var(--text-primary);">${p.Size}</div>
+        </div>
+        ` : ''}
+        ${p.Color ? `
+        <div>
+          <div style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.25rem;">Color</div>
+          <div style="font-size: 1.125rem; color: var(--text-primary);">${p.Color}</div>
+        </div>
+        ` : ''}
+      </div>
+      <div style="background: var(--bg-color); padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+        <div style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.5rem;">Price</div>
+        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary-color);">
+          ${originalPrice}₹${finalPrice}
+        </div>
+        ${p.Discount && p.Discount > 0 ? `
+        <div style="margin-top: 0.5rem;">
+          <span class="discount" style="background: var(--secondary-color); color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.875rem;">
+            ${p.Discount}% OFF
+          </span>
+        </div>
+        ` : ''}
+      </div>
+      <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border-color);">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Quantity:</label>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <input id='qty' type="number" value="1" min="1" style="width: 100px; padding: 0.75rem;">
+          <button id='add' class="btn success" style="flex: 1;">Add to Cart</button>
+        </div>
+      </div>
+      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color); font-size: 0.875rem; color: var(--text-secondary);">
+        Product ID: ${p.Product_ID} | Database: online_apparel_store_dbms
+      </div>
+    `;
+    
+    document.getElementById('add').addEventListener('click', async ()=>{
+      try{
+        const qty=parseInt(document.getElementById('qty').value||1);
+        if(qty < 1){
+          alert('Quantity must be at least 1');
+          return;
+        }
+        
+        const btn = document.getElementById('add');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Adding to Cart...';
+        
+        const custId = await getCustomerId();
+        
+        // Show DB operation
+        const dbOp = document.createElement('div');
+        dbOp.className = 'db-operation';
+        dbOp.textContent = `→ INSERT INTO cart (Customer_ID, Product_ID, Quantity) VALUES (${custId}, ${id}, ${qty})`;
+        btn.parentElement.appendChild(dbOp);
+        
+        const res = await fetch('/api/cart/add',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({product_id:id,quantity:qty,guest_id: custId})
+        });
+        const r=await res.json();
+        
+        if(r.ok) {
+          dbOp.textContent = `✓ Successfully added to cart table`;
+          dbOp.style.borderLeftColor = 'var(--secondary-color)';
+          btn.textContent = '✓ Added to Cart!';
+          btn.classList.add('success');
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.disabled = false;
+            btn.classList.remove('success');
+            dbOp.remove();
+          }, 2000);
+        } else {
+          alert('Error: ' + (r.error || 'Failed to add to cart'));
+          btn.textContent = originalText;
+          btn.disabled = false;
+          dbOp.remove();
+        }
+      }catch(err){
+        alert('Error adding to cart: ' + err.message);
+        console.error(err);
+        document.getElementById('add').disabled = false;
+        document.getElementById('add').textContent = 'Add to Cart';
+      }
+    });
+  }catch(e){
+    const el=document.getElementById('content');
+    el.innerHTML = `
+      <div class="alert error">
+        <strong>Error loading product:</strong> ${e.message}
+      </div>
+    `;
+    console.error(e);
+  }
+}
+load();
+</script>
+</body>
+</html>
